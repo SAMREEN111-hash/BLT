@@ -60,17 +60,29 @@ def get_slack_username(workspace_client, user_id):
     except (SlackApiError, KeyError, AttributeError) as e:
         logger.warning(f"Failed to fetch username for user_id {user_id}: {str(e)}")
     return None
+    
+def fetch_project_data(source="db"):
+    """
+    Fetch project data from configurable source.
+
+    NOTE:
+    This prepares the code for future migration from Django ORM
+    to API-based data access (BLT-Next direction).
+
+    Future:
+    - Replace "db" with API client
+    - Enables Slackbot to run independently of Django monolith
+    """
+    if source == "db":
+        return fetch_project_from_db()
+    else:
+        raise ValueError(f"Unsupported source: {source}")
 
 
 def get_project_with_least_members():
     """Get the project channel name with the least members (excluding project-blt)."""
     try:
-        project = (
-            Project.objects.filter(slack_channel__isnull=False, slack_user_count__gt=0)
-            .exclude(slack_channel="project-blt")
-            .order_by("slack_user_count")
-            .first()
-        )
+        project = fetch_project_data()  # future: switch to "api"
         return project.slack_channel if project else None
     except Exception as e:
         logger.error(f"Failed to fetch project with least members: {str(e)}", exc_info=True)
